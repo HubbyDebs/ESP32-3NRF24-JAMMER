@@ -16,14 +16,36 @@ A signal jamming device based on **ESP32** with three **NRF24L01** modules opera
 
 ### Main Components
 
-| Component | Specification |
-|-----------|----------------|
-| **Microcontroller** | ESP32 (2 cores, 240 MHz) |
-| **RF Modules** | 3x NRF24L01 (2.4 GHz, SPI) |
-| **Display** | OLED SSD1306 (128x64, I2C) |
-| **User Input** | 3x Buttons with debouncing |
-| **Visual Indicator** | Status LED |
-| **Communication Bus** | Shared VSPI (SPI) |
+| Component | Specification | Recommended |
+|-----------|----------------|------------|
+| **Microcontroller** | ESP32 (2 cores, 240 MHz) | ESP32 DevKit v1 |
+| **RF Modules** | 3x NRF24L01 (2.4 GHz, SPI) | **ML01** or **2GM4** |
+| **Display** | OLED SSD1306 (128x64, I2C) | 128x64 pixels |
+| **Voltage Regulator** | Step-down converter | AMS1117 (5V → 3.3V) |
+| **User Input** | 3x Buttons with debouncing | Push buttons |
+| **Visual Indicator** | Status LED | 3mm LED |
+| **Communication Bus** | Shared VSPI (SPI) | Hardware SPI |
+
+### NRF24L01 Module Selection
+
+#### **ML01 (Recommended - Budget Friendly)**
+```
+✓ Standard NRF24L01 clone variant
+✓ Wide availability
+✓ Lower cost (~$1-2 USD)
+✓ Good for prototyping
+⚠️ Requires proper power supply regulation
+```
+
+#### **2GM4 (Recommended - Higher Reliability)**
+```
+✓ Enhanced NRF24L01 variant (nRF24L01+PA+LNA)
+✓ Built-in Power Amplifier & Low Noise Amplifier
+✓ Extended range
+✓ Better noise immunity
+✓ Requires careful decoupling
+⚠️ Higher current consumption (~115mA peak)
+```
 
 ### ESP32 Pinout
 
@@ -55,6 +77,184 @@ Radio 2 (NRF24 #2):
 Radio 3 (NRF24 #3):
   - CE:       GPIO17
   - CSN:      GPIO32 ⚠️ (GPIO strapping pin, consider changing)
+```
+
+## 📐 Power Supply Circuit Diagram
+
+### Single NRF24L01 with AMS1117 (5V → 3.3V)
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     NRF24L01 Power Supply Module                │
+└─────────────────────────────────────────────────────────────────┘
+
+        ┌──────────────────────────────────────────────┐
+        │          AMS1117 (5V → 3.3V)                │
+        │                                              │
+   5V ──┤IN  GND                                       │
+        │       ╱╲                                     │
+        │      ╱  ╲                                    │
+        │     ╱ .. ╲                                   │
+        │          └────┬──────────────────┬───────┐   │
+        │                │                 │       │   │
+        │              ┌─┴─┐              │      │   │
+        │              │GND│              │      │   │
+        │              └───┘              │      │   │
+        │               │                 │      │   │
+        │               │                 │      │   │
+        │               │    OUT │───────┤      │   │
+        │                       │       │       │   │
+        └───────────────────────┼───────┼───────┼───┘
+                                │       │       │
+                               GND     │       │
+                                       │       │
+        ┌───────────────────────────────┴───────┴─────────────────┐
+        │            NRF24L01 Power Distribution Network          │
+        └───────────────────────────────────────────────────────┘
+
+              3.3V Input (FROM AMS1117)
+                    │
+        ┌───────────┼───────────┐
+        │           │           │
+        │         ┌─┴──┐      ┌─┴──┐
+        │         │10µF│      │ 100nF
+        │         │Elec│      │(Ceramic)
+        │         └──┬─┘      └──┬─┘
+        │            │           │
+        │           GND         GND
+        │
+        ├──────────────┬──────────────┤
+        │              │              │
+        │           (To VCC pin)      │
+        │           (pin 1 or 2)      │
+        │
+        └─────────────────────────────┘
+
+
+NRF24L01 Pin Configuration (8-pin DIP):
+───────────────────────────────────────
+  1(GND) ──●──○ 2(VCC)
+  3(CE)  ──●──○ 4(CSN)
+  5(SCK) ──●──○ 6(MOSI)
+  7(MISO)──●──○ 8(IRQ)
+
+Connection Summary for ONE NRF24L01:
+────────────────────────────────────
+  VCC (pin 2)    → 3.3V rail (after AMS1117)
+  GND (pin 1)    → GND
+  CE  (pin 3)    → ESP32 GPIO pin
+  CSN (pin 4)    → ESP32 GPIO pin
+  SCK (pin 5)    → ESP32 GPIO18 (VSPI)
+  MOSI(pin 6)    → ESP32 GPIO23 (VSPI)
+  MISO(pin 7)    → ESP32 GPIO19 (VSPI)
+  IRQ (pin 8)    → GND (optional, can leave floating)
+```
+
+### Triple NRF24L01 Setup with Individual AMS1117 Regulators
+
+```
+┌──────────────────────────────────────────────────────────────────────────┐
+│                  COMPLETE TRIPLE NRF24L01 POWER SUPPLY                   │
+└──────────────────────────────────────────────────────────────────────────┘
+
+                            +5V Input (USB/PSU)
+                                  │
+                    ┌─────────────┴─────────────┐
+                    │                           │
+                  ┌─┴─┐                       ┌─┴─┐
+                  │470µF│                     │100µF│
+                  │Elec │                     │Elec │
+                  └──┬──┘                     └──┬──┘
+                    GND                        GND
+
+                    │ (+5V)                     │ (+5V)
+        ┌───────────┴─────────────────────────┐
+        │                                     │
+        │  ┌──────────────────────────────────┼──────────┐
+        │  │  ┌─────────────────────────────────────────┴──────┐
+        │  │  │                                                 │
+        │  │  │                                                 │
+    ┌───┼──┼──┼─ AMS1117 #1              ┌────────────────────┐│
+    │   │  │  │ (for Radio 1)            │                    ││
+    │   │  │  │                          │ ┌───────────────┐  ││
+    │ IN│--┼--┤OUT (3.3V)  ───────┬──────┼─┤10µF + 100nF   │  ││
+    │   │  │  │                   │      │ └────────┬──────┘  ││
+    │GND├──┼──┤GND            ────┼──────┼──────────┤──────────┘│
+    │   │  │  │               │   │      │          │           │
+    └───┼──┼──┴───────────────┼───┼──────┤ NRF24 #1 │           │
+        │  │                  │   │      │ (ML01 or 2GM4)      │
+        │  │                  │  GND    └──────────┘           │
+        │  │                  │                                 │
+        │  │  ┌────────────────────────────────────────────┐   │
+        │  │  │                                            │   │
+    ┌───┼──┼──┼─ AMS1117 #2              ┌───────────────┐│   │
+    │   │  │  │ (for Radio 2)            │               ││   │
+    │ IN│--┼──┤OUT (3.3V)  ────┬─────────┤10µF + 100nF   │    │
+    │   │  │  │                │         └────────┬──────┘    │
+    │GND├──┼──┤GND         ────┼─────────────────┤──────┐     │
+    │   │  │  │            │   │                │       │     │
+    └───┼──┼──┴────────────┼───┼──────── NRF24 #2       │     │
+        │  │               │  GND                       │     │
+        │  │               │                           │     │
+        │  │  ┌────────────────────────────────────────┤─────┘
+        │  │  │                                        │
+    ┌───┼──┼──┼─ AMS1117 #3    ┌─────────────────┐   │
+    │   │  │  │ (for Radio 3)  │                 │   │
+    │ IN│--┼──┤OUT (3.3V) ┬────┤10µF + 100nF     │   │
+    │   │  │  │           │    └────────┬────────┘   │
+    │GND├──┼──┤GND    ────┼────────────┤───────┐    │
+    │   │  │  │        │   │           │       │    │
+    └───┼──┼──┴────────┼───┼───────NRF24 #3   │    │
+        │  │           │  GND                 │    │
+        │  │           │                      │    │
+        │  │           │                      │    │
+        │  └──────────────────────────────────┘    │
+        │                                           │
+        └───────────────────────────────────────────┘
+
+
+                    Shared SPI Bus (ESP32)
+                  ────────────────────────────
+ESP32 GPIO18 (SCK)  ──┬──→ All NRF24 SCK pins
+ESP32 GPIO23 (MOSI) ──┬──→ All NRF24 MOSI pins
+ESP32 GPIO19 (MISO) ──┬──→ All NRF24 MISO pins (parallel)
+ESP32 GPIO15 (CSN1) ──→ NRF24 #1 CSN
+ESP32 GPIO25 (CSN2) ──→ NRF24 #2 CSN
+ESP32 GPIO32 (CSN3) ──→ NRF24 #3 CSN
+ESP32 GPIO27 (CE1)  ──→ NRF24 #1 CE
+ESP32 GPIO26 (CE2)  ──→ NRF24 #2 CE
+ESP32 GPIO17 (CE3)  ──→ NRF24 #3 CE
+
+GND (ESP32) ────────→ All GND connections
+```
+
+## 💡 Component Recommendations
+
+### Power Supply
+```
+Input:  5V / 1-2A (USB or external power supply)
+Output: 3.3V / 500mA per AMS1117 regulator
+Total:  Triple AMS1117 configuration for reliability
+```
+
+### Capacitors for Each NRF24L01 Module
+```
+Per Radio:
+  • 10µF Electrolytic capacitor (input to 3.3V rail)
+  • 100nF Ceramic capacitor (tight coupling to VCC)
+  • Optional: 1µF ceramic for additional stability
+
+All capacitors should be placed as close as possible to 
+the NRF24 VCC and GND pins!
+```
+
+### PCB Layout Considerations
+```
+✓ Keep NRF24 antenna traces away from ESP32
+✓ Use short wires for SPI connections
+✓ Separate 3.3V rails for each radio if possible
+✓ Ground plane recommended
+✓ Star grounding at regulator
 ```
 
 ## 🎮 User Interface
@@ -230,7 +430,7 @@ When starting or accessing **SETTINGS**, you'll see:
 
 **WE ARE NOT RESPONSIBLE FOR:**
 - Unauthorized signal interference
-> - Damage to third-party equipment
+- Damage to third-party equipment
 - Violations of telecommunications regulations
 
 ## 📝 Credits
@@ -248,17 +448,33 @@ MIT License - Use it freely, but at your own legal responsibility.
 ### 🔧 Troubleshooting
 
 **Issue:** Radios not detected
-- Verify power supply voltage (exactly 3.3V)
-- Check SPI pin connections
+- Verify power supply voltage (exactly 3.3V on NRF24 VCC)
+- Check SPI pin connections (SCK, MOSI, MISO)
 - Verify decoupling capacitors on NRF24 modules
+- Ensure AMS1117 regulators are properly connected
+- Test each radio individually with separate AMS1117
 
 **Issue:** OLED not displaying
 - Verify I2C address (0x3C by default)
 - Scan I2C: `Wire.beginTransmission(0x3C)`
+- Check SDA/SCL pull-up resistors (4.7kΩ recommended)
 
 **Issue:** Buttons not responding
-- Check pull-up resistors
+- Check pull-up resistors (10kΩ recommended)
 - Adjust `DEBOUNCE_MS` if necessary
+- Verify GPIO pins are configured as INPUT_PULLUP
+
+**Issue:** High power consumption or instability
+- Use individual AMS1117 per radio (don't share)
+- Add 470µF capacitor on 5V input
+- Increase 10µF capacitor to 22µF per radio
+- Ensure short wire connections to NRF24
+
+**Issue:** Radio range is limited (2GM4 module)**
+- Verify antenna connection (should not be loose)
+- Check PA+LNA bias resistors
+- Ensure adequate power supply (1-2A capacity)
+- Position antennas away from metal
 
 ---
 
