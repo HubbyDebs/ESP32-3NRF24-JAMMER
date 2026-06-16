@@ -35,8 +35,9 @@ A signal jamming device based on **ESP32** with three **NRF24L01** modules opera
 ✓ Lower cost (~$1-2 USD)
 ✓ Good for prototyping
 ✓ Reliable performance
+✓ Output Power: 20 dBm
 ⚠️ Requires proper power supply regulation
-⚠️ Need 10µF electrolytic capacitor on VCC pin
+⚠️ CRITICAL: Need 10µF electrolytic capacitor on VCC pin
 ```
 
 #### **E01-2G4M27D (Ebyte - Recommended - Higher Reliability)**
@@ -45,9 +46,10 @@ A signal jamming device based on **ESP32** with three **NRF24L01** modules opera
 ✓ Built-in Power Amplifier & Low Noise Amplifier
 ✓ Extended range
 ✓ Better noise immunity
+✓ Output Power: 27 dBm (Higher TX Power!)
 ✓ Requires careful decoupling
 ⚠️ Higher current consumption (~115mA peak)
-⚠️ Critical: Must have 10µF electrolytic capacitor on VCC
+⚠️ CRITICAL: Must have 10µF electrolytic capacitor on VCC
 ```
 
 ### ESP32 Pinout
@@ -88,33 +90,7 @@ Radio 3 (NRF24 #3):
 
 **DO THIS FOR EVERY NRF24L01 (E01-ML01DP5 or E01-2G4M27D):**
 
-```
-                    VCC (+3.3V)
-                          │
-                    ┌─────┴─────┐
-                    │           │
-                  ┌─┴─┐      CSN (yellow)
-                  │10µF │    (to ESP32)
-                  │Elec │
-                  │10v-64v
-                  └──┬─┘
-                    │
-          ┌─────────┼─────────────────────────────────────┐
-          │         │                                     │
-        Ground      │                          NRF24L01 Pinout:
-          │         │                                     │
-          │         │               1(GND)─────┼──→ to Ground
-          │         │               2(VCC)─────┼──→ to VCC (+3.3V)
-          │         │               3(CE)──────→ to ESP32 GPIO
-          │         │               4(CSN)─────→ to ESP32 GPIO
-          │         │               5(SCK)─────→ to ESP32 GPIO18
-          │         │               6(MOSI)────→ to ESP32 GPIO23
-          │         │               7(MISO)────→ to ESP32 GPIO19
-          │         │               8(IRQ)─────→ to Ground (optional)
-          │         │                                     │
-          │         └─────────────────────────────────────┘
-          │
-```
+![NRF24L01 Capacitor Configuration](./images/nrf24_capacitor_config.jpg)
 
 **Connection Summary for ONE NRF24L01 (E01-ML01DP5 or E01-2G4M27D):**
 ```
@@ -126,6 +102,31 @@ Radio 3 (NRF24 #3):
   MOSI(pin 6)    → ESP32 GPIO23 (VSPI)
   MISO(pin 7)    → ESP32 GPIO19 (VSPI)
   IRQ (pin 8)    → GND (optional, can leave floating)
+```
+
+### NRF24L01 Pin Configuration & SPI Connection Details
+
+![NRF24L01 Pinout Diagram](./images/nrf24_pinout.jpg)
+
+**Detailed Pin Connections:**
+```
+NRF24L01 Pin Configuration (8-pin DIP):
+───────────────────────────────────────
+  1(GND) ──●──○ 2(VCC)
+  3(CE)  ──●──○ 4(CSN)
+  5(SCK) ──●──○ 6(MOSI)
+  7(MISO)──●──○ 8(IRQ)
+
+Pin Functions:
+────────────────────────────────────────
+  Pin 1 - GND      → Ground
+  Pin 2 - VCC      → 3.3V with 10µF capacitor
+  Pin 3 - CE       → Chip Enable (GPIO)
+  Pin 4 - CSN      → Chip Select (GPIO)
+  Pin 5 - SCK      → SPI Clock (GPIO18)
+  Pin 6 - MOSI     → SPI Data Out (GPIO23)
+  Pin 7 - MISO     → SPI Data In (GPIO19)
+  Pin 8 - IRQ      → Interrupt (optional)
 ```
 
 ### Single NRF24L01 (E01-ML01DP5 or E01-2G4M27D) with AMS1117 (5V → 3.3V)
@@ -222,9 +223,11 @@ POWER SUPPLY: Triple NRF24L01 + 3× AMS1117
           VCC           VCC VCC        VCC
            │             │   │         │   │            │
     E01-ML01DP5     E01-ML01DP5   E01-ML01DP5        │
-    or           or           or              │
-    E01-2G4M27D  E01-2G4M27D  E01-2G4M27D        │
-    (Ebyte)      (Ebyte)      (Ebyte)            │
+    20dBm          20dBm           20dBm             │
+    or             or              or                │
+    E01-2G4M27D    E01-2G4M27D     E01-2G4M27D       │
+    27dBm          27dBm           27dBm             │
+    (Ebyte)        (Ebyte)         (Ebyte)           │
 
 
             Shared SPI Bus (ESP32 to all radios)
@@ -251,6 +254,10 @@ GND (ESP32) ────────→ All GND connections
 Input:  5V / 1-2A (USB or external power supply)
 Output: 3.3V / 500mA per AMS1117 regulator
 Total:  Triple AMS1117 configuration for reliability
+
+Power Output by Module:
+  E01-ML01DP5 (Ebyte):   20 dBm output power
+  E01-2G4M27D (Ebyte):   27 dBm output power (7dBm difference ≈ 5x stronger)
 ```
 
 ### Capacitors for Each NRF24L01 Module (E01-ML01DP5 or E01-2G4M27D) ⚠️ CRITICAL
@@ -260,7 +267,7 @@ Per Radio (REQUIRED for stable operation):
   • 10µF Electrolytic capacitor (10v-64v rated)
     └─ MUST be placed directly on NRF24 VCC pin
     └─ Provides bulk energy storage and decoupling
-    └─ CRITICAL for E01-ML01DP5 and E01-2G4M27D
+    └─ CRITICAL for E01-ML01DP5 (20dBm) and E01-2G4M27D (27dBm)
     
 ⚠️ CRITICAL: Use ELECTROLYTIC capacitors, NOT ceramic!
    Ceramic capacitors lack the ESR needed for low-frequency
@@ -270,6 +277,7 @@ Per Radio (REQUIRED for stable operation):
    - Radios will not detect or initialize
    - ESP32 may crash or reboot
    - Performance will be unreliable
+   - Higher power draws with PA+LNA modules will cause brownouts
    
 All capacitors should be placed as close as possible to 
 the NRF24 VCC and GND pins!
@@ -284,6 +292,7 @@ the NRF24 VCC and GND pins!
 ✓ Ground plane recommended
 ✓ Star grounding at regulator
 ✓ Use quality AMS1117 with heatsink if needed
+✓ For E01-2G4M27D (27dBm): ensure robust power delivery
 ```
 
 ## 🎮 User Interface
@@ -490,6 +499,7 @@ MIT License - Use it freely, but at your own legal responsibility.
 - Ensure short wire connections to NRF24
 - Check GND connections are solid
 - Verify capacitor is electrolytic, NOT ceramic
+- If using E01-2G4M27D (27dBm), ensure robust power supply (1-2A minimum)
 
 **Issue:** OLED not displaying
 - Verify I2C address (0x3C by default)
@@ -507,13 +517,15 @@ MIT License - Use it freely, but at your own legal responsibility.
 - Add 470µF capacitor on 5V input
 - Ensure short wire connections to NRF24
 - Check all GND connections are solid
+- For E01-2G4M27D (27dBm): ensure power supply can deliver 1-2A continuously
 
-**Issue:** Radio range is limited (E01-2G4M27D module)
+**Issue:** Radio range is limited (E01-2G4M27D module with 27dBm)
 - Verify antenna connection (should not be loose)
 - Check PA+LNA bias resistors
-- Ensure adequate power supply (1-2A capacity)
+- Ensure adequate power supply (1-2A capacity - CRITICAL!)
 - Position antennas away from metal
 - Verify capacitor configuration (they affect range!)
+- Check 3.3V voltage stability (should be 3.2-3.4V exactly)
 
 ---
 
