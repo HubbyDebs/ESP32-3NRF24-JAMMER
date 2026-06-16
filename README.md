@@ -81,7 +81,7 @@ Radio 2 (NRF24 #2):
 
 Radio 3 (NRF24 #3):
   - CE:       GPIO17
-  - CSN:      GPIO32 ⚠️ (GPIO strapping pin, consider changing)
+  - CSN:      GPIO32
 ```
 
 ## 📐 Power Supply Circuit Diagram
@@ -90,145 +90,12 @@ Radio 3 (NRF24 #3):
 
 **DO THIS FOR EVERY NRF24L01 (E01-ML01DP5 or E01-2G4M27D):**
 
-![NRF24L01 Capacitor Configuration](./images/nrf24_capacitor_config.jpg)
-
-**Connection Summary for ONE NRF24L01 (E01-ML01DP5 or E01-2G4M27D):**
-```
-  VCC (pin 2)    → 3.3V rail (after AMS1117) + 10µF decoupling cap
-  GND (pin 1)    → GND
-  CE  (pin 3)    → ESP32 GPIO pin
-  CSN (pin 4)    → ESP32 GPIO pin
-  SCK (pin 5)    → ESP32 GPIO18 (VSPI)
-  MOSI(pin 6)    → ESP32 GPIO23 (VSPI)
-  MISO(pin 7)    → ESP32 GPIO19 (VSPI)
-  IRQ (pin 8)    → GND (optional, can leave floating)
-```
-
-### NRF24L01 Pin Configuration & SPI Connection Details
-
-![NRF24L01 Pinout Diagram](./images/nrf24_pinout.jpg)
-
-**Detailed Pin Connections:**
-```
-NRF24L01 Pin Configuration (8-pin DIP):
-───────────────────────────────────────
-  1(GND) ──●──○ 2(VCC)
-  3(CE)  ──●──○ 4(CSN)
-  5(SCK) ──●──○ 6(MOSI)
-  7(MISO)──●──○ 8(IRQ)
-
-Pin Functions:
-────────────────────────────────────────
-  Pin 1 - GND      → Ground
-  Pin 2 - VCC      → 3.3V with 10µF capacitor
-  Pin 3 - CE       → Chip Enable (GPIO)
-  Pin 4 - CSN      → Chip Select (GPIO)
-  Pin 5 - SCK      → SPI Clock (GPIO18)
-  Pin 6 - MOSI     → SPI Data Out (GPIO23)
-  Pin 7 - MISO     → SPI Data In (GPIO19)
-  Pin 8 - IRQ      → Interrupt (optional)
-```
-
-### Single NRF24L01 (E01-ML01DP5 or E01-2G4M27D) with AMS1117 (5V → 3.3V)
-
-```
-              5V Input (USB/PSU)
-                    │
-         ┌──────────┴──────────┐
-         │                     │
-       ┌─┴─┐              ┌────┴───┐
-       │470µF             │ GND    │
-       │Elec              └────────┘
-       └──┬─┘                │
-         GND                 │
-          │                  │
-          └──────────────────┘
-               │(5V)
-               │
-         ┌─────┴─────────────────────────┐
-         │    AMS1117 Regulator          │
-         │  ┌──────────────────────────┐ │
-         │  │                          │ │
-       5V ─┤IN          OUT ├─→ 3.3V  │ │
-         │  │               │          │ │
-       GND ┤GND         GND ├─ GND    │ │
-         │  │               │          │ │
-         │  └──────────────────────────┘ │
-         └──────────┬──────────┬────────┘
-                    │          │
-                 (3.3V)        GND
-                    │
-         ┌──────────┴──────────────────┐
-         │                             │
-       ┌─┴─┐        ┌────────────┐   │
-       │10µF│        │ 100nF      │   │
-       │Elec│◄──┤    │ Ceramic   │   │
-       └──┬─┘   │    └────┬───────┘   │
-         GND    │         GND         │
-              ┌─┴──────────┘           │
-              │                        │
-      (To NRF24 VCC pin)      (To NRF24 GND)
-      (E01-ML01DP5 or              │
-       E01-2G4M27D)                │
-              │                        │
-              └────────────────────────┘
-```
+![NRF24L01 Capacitor Configuration](./nrf24.PNG)
 
 ### Triple NRF24L01 (E01-ML01DP5 or E01-2G4M27D) Setup with Individual AMS1117 Regulators
 
 ```
 POWER SUPPLY: Triple NRF24L01 + 3× AMS1117
-════════════════════════════════════════════
-
-                    5V Input (USB/PSU)
-                          │
-           ┌──────────────┴──────────────┐
-           │                            │
-         ┌─┴─┐                        ┌─┴─┐
-         │470µF                       │100µF
-         │Elec                        │Elec
-         └──┬─┘                       └──┬─┘
-           GND                         GND
-            │                           │
-            └───────────────┬───────────┘
-                          (5V)
-                            │
-        ┌───────────────────┼───────────────────┐
-        │                   │                   │
-        │              ┌─────┴─────────────────────────┐
-        │              │                              │
-   ┌────┴──────┐   ┌──┴────────────────────────────────────┐
-   │ AMS1117#1 │   │ AMS1117#2              ┌────────────────────┐
-   │ (Radio 1) │   │ (Radio 2)              │ AMS1117#3          │
-   │           │   │                        │ (Radio 3)          │
-  5V─┤IN   OUT │   5V─┤IN   OUT             5V─┤IN   OUT        │
-   │ ├─→(3.3V)┼──────├─→(3.3V)        ─────────├─→(3.3V)        │
-   │ │        │    │ │                    │  │                  │
-  GND┤GND  GND │  GND┤GND  GND            GND┤GND  GND          │
-   │ │        │    │ │                    │  │                  │
-   └─┴────────┘    └─┴────────┐          └──┴──────┐            │
-        │(3.3V)           │(3.3V)               │(3.3V)         │
-        │                 │                     │              │
-        │                 │                     │              │
-    ┌──┴──────────┐   ┌──┴──────────┐   ┌─────┴──────┐        │
-    │             │   │             │   │            │        │
-  ┌─┴─┐ ┌───────┐ │ ┌─┴─┐ ┌───────┐ │ ┌─┴─┐ ┌──────┴─┐      │
-  │10µF│ │100nF  │ │ │10µF│ │100nF  │ │ │10µF│ │100nF   │      │
-  │Elec│ │Ceramic│ │ │Elec│ │Ceramic│ │ │Elec│ │Ceramic │      │
-  └──┬─┘ └───┬──┘ │ └──┬─┘ └───┬──┘ │ └──┬─┘ └───┬────┘      │
-    GND     GND   │   GND     GND   │   GND     GND          │
-              │   │              │   │       │              │
-           ┌──┴──────────┐   ┌───┴──────┐  ┌──┴─────────┐   │
-           │             │   │          │  │            │   │
-          VCC           VCC VCC        VCC
-           │             │   │         │   │            │
-    E01-ML01DP5     E01-ML01DP5   E01-ML01DP5        │
-    20dBm          20dBm           20dBm             │
-    or             or              or                │
-    E01-2G4M27D    E01-2G4M27D     E01-2G4M27D       │
-    27dBm          27dBm           27dBm             │
-    (Ebyte)        (Ebyte)         (Ebyte)           │
-
 
             Shared SPI Bus (ESP32 to all radios)
          ────────────────────────────────────────
@@ -250,6 +117,9 @@ GND (ESP32) ────────→ All GND connections
 ## 💡 Component Recommendations
 
 ### Power Supply
+
+![AMS1117 3.3V Diagram](./ams1117.PNG)
+
 ```
 Input:  5V / 1-2A (USB or external power supply)
 Output: 3.3V / 500mA per AMS1117 regulator
@@ -472,10 +342,11 @@ When starting or accessing **SETTINGS**, you'll see:
 - Violations of telecommunications regulations
 
 ## 📝 Credits
-
+- **Especial thanks to:** https://github.com/dkyazzentwatwa/cypher-jammer-3NRF24
 - **Developer:** HubbyDebs
 - **AI Assistance:** Gemini and Claude
 - **Prototyping/Testing:** OpenSource RF Community
+
 
 ## 📄 License
 
@@ -514,10 +385,8 @@ MIT License - Use it freely, but at your own legal responsibility.
 **Issue:** High power consumption or instability
 - **Priority 1:** Verify 10µF electrolytic capacitor on each NRF24 VCC pin (10v-64v)
 - **Priority 2:** Use individual AMS1117 per radio (don't share)
-- Add 470µF capacitor on 5V input
 - Ensure short wire connections to NRF24
 - Check all GND connections are solid
-- For E01-2G4M27D (27dBm): ensure power supply can deliver 1-2A continuously
 
 **Issue:** Radio range is limited (E01-2G4M27D module with 27dBm)
 - Verify antenna connection (should not be loose)
