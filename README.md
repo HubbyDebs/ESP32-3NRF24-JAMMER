@@ -19,7 +19,7 @@ A signal jamming device based on **ESP32** with three **NRF24L01** modules opera
 | Component | Specification | Recommended |
 |-----------|----------------|------------|
 | **Microcontroller** | ESP32 (2 cores, 240 MHz) | ESP32 DevKit v1 |
-| **RF Modules** | 3x NRF24L01 (2.4 GHz, SPI) | **ML01** or **2GM4** |
+| **RF Modules** | 3x NRF24L01 (2.4 GHz, SPI) | **E01-ML01DP5 (Ebyte)** or **E01-2G4M27D (Ebyte)** |
 | **Display** | OLED SSD1306 (128x64, I2C) | 128x64 pixels |
 | **Voltage Regulator** | Step-down converter | AMS1117 (5V → 3.3V) |
 | **User Input** | 3x Buttons with debouncing | Push buttons |
@@ -28,23 +28,26 @@ A signal jamming device based on **ESP32** with three **NRF24L01** modules opera
 
 ### NRF24L01 Module Selection
 
-#### **ML01 (Recommended - Budget Friendly)**
+#### **E01-ML01DP5 (Ebyte - Recommended - Budget Friendly)**
 ```
-✓ Standard NRF24L01 clone variant
+✓ Standard NRF24L01 variant by Ebyte
 ✓ Wide availability
 ✓ Lower cost (~$1-2 USD)
 ✓ Good for prototyping
+✓ Reliable performance
 ⚠️ Requires proper power supply regulation
+⚠️ Need 10µF electrolytic capacitor on VCC pin
 ```
 
-#### **2GM4 (Recommended - Higher Reliability)**
+#### **E01-2G4M27D (Ebyte - Recommended - Higher Reliability)**
 ```
-✓ Enhanced NRF24L01 variant (nRF24L01+PA+LNA)
+✓ Enhanced NRF24L01 variant by Ebyte (nRF24L01+PA+LNA)
 ✓ Built-in Power Amplifier & Low Noise Amplifier
 ✓ Extended range
 ✓ Better noise immunity
 ✓ Requires careful decoupling
 ⚠️ Higher current consumption (~115mA peak)
+⚠️ Critical: Must have 10µF electrolytic capacitor on VCC
 ```
 
 ### ESP32 Pinout
@@ -83,64 +86,49 @@ Radio 3 (NRF24 #3):
 
 ### ⚠️ CRITICAL CAPACITOR CONFIGURATION FOR EACH NRF24L01
 
-**DO THIS FOR EVERY NRF24L01:**
+**DO THIS FOR EVERY NRF24L01 (E01-ML01DP5 or E01-2G4M27D):**
 
 ```
-VCC (+3.3V)
-    │
-    ├─────────┬──────┐
-    │         │      │
-  ┌─┴─┐    CSN(yellow)
-  │10µF │    (to ESP32)
-  │Elec │
-  │10v-64v
-  └──┬─┘
-    │
-    ├─────────────────────────────────────────────┐
-    │                                             │
-Ground                                    NRF24L01 Pinout:
-    │                                             │
-    │                                    1(GND)───┼──→ to Ground
-    │                                    2(VCC)───┼──→ to VCC (+3.3V)
-    │                                    3(CE)────→ to ESP32 GPIO
-    │                                    4(CSN)───→ to ESP32 GPIO
-    │                                    5(SCK)───→ to ESP32 GPIO18
-    │                                    6(MOSI)──→ to ESP32 GPIO23
-    │                                    7(MISO)──→ to ESP32 GPIO19
-    │                                    8(IRQ)───→ to Ground (optional)
-    │                                             │
-    │                                    CE ←─────→ to ESP32 GPIO
-    │                                    SCK ←────→ to ESP32 GPIO18
-    │                                    MISO ←───→ to ESP32 GPIO19
-    │                                    IRQ ←────→ (optional)
-    │                                    MOSI ←───→ to ESP32 GPIO23
-    │
-    └─────────────────────────────────────────────┘
+                    VCC (+3.3V)
+                          │
+                    ┌─────┴─────┐
+                    │           │
+                  ┌─┴─┐      CSN (yellow)
+                  │10µF │    (to ESP32)
+                  │Elec │
+                  │10v-64v
+                  └──┬─┘
+                    │
+          ┌─────────┼─────────────────────────────────────┐
+          │         │                                     │
+        Ground      │                          NRF24L01 Pinout:
+          │         │                                     │
+          │         │               1(GND)─────┼──→ to Ground
+          │         │               2(VCC)─────┼──→ to VCC (+3.3V)
+          │         │               3(CE)──────→ to ESP32 GPIO
+          │         │               4(CSN)─────→ to ESP32 GPIO
+          │         │               5(SCK)─────→ to ESP32 GPIO18
+          │         │               6(MOSI)────→ to ESP32 GPIO23
+          │         │               7(MISO)────→ to ESP32 GPIO19
+          │         │               8(IRQ)─────→ to Ground (optional)
+          │         │                                     │
+          │         └─────────────────────────────────────┘
+          │
 ```
 
-### NRF24L01 Pin Configuration & SPI Connection Details
-
+**Connection Summary for ONE NRF24L01 (E01-ML01DP5 or E01-2G4M27D):**
 ```
-NRF24L01 Pin Configuration (8-pin DIP):
-───────────────────────────────────────
-  1(GND) ──●──○ 2(VCC)
-  3(CE)  ──●──○ 4(CSN)
-  5(SCK) ──●──○ 6(MOSI)
-  7(MISO)──●──○ 8(IRQ)
-
-Detailed Connection Summary:
-────────────────────────────
-  Pin 1 - GND      → GND (Ground)
-  Pin 2 - VCC      → 3.3V rail (after AMS1117) + 10µF decoupling cap
-  Pin 3 - CE       → ESP32 GPIO pin (GPIO27, 26, or 17)
-  Pin 4 - CSN      → ESP32 GPIO pin (GPIO15, 25, or 32)
-  Pin 5 - SCK      → ESP32 GPIO18 (VSPI Clock)
-  Pin 6 - MOSI     → ESP32 GPIO23 (VSPI Data Output)
-  Pin 7 - MISO     → ESP32 GPIO19 (VSPI Data Input)
-  Pin 8 - IRQ      → GND or left floating (optional)
+  VCC (pin 2)    → 3.3V rail (after AMS1117) + 10µF decoupling cap
+  GND (pin 1)    → GND
+  CE  (pin 3)    → ESP32 GPIO pin
+  CSN (pin 4)    → ESP32 GPIO pin
+  SCK (pin 5)    → ESP32 GPIO18 (VSPI)
+  MOSI(pin 6)    → ESP32 GPIO23 (VSPI)
+  MISO(pin 7)    → ESP32 GPIO19 (VSPI)
+  IRQ (pin 8)    → GND (optional, can leave floating)
 ```
 
-### Single NRF24L01 with AMS1117 (5V → 3.3V)
+### Single NRF24L01 (E01-ML01DP5 or E01-2G4M27D) with AMS1117 (5V → 3.3V)
 
 ```
               5V Input (USB/PSU)
@@ -178,12 +166,14 @@ Detailed Connection Summary:
          GND    │         GND         │
               ┌─┴──────────┘           │
               │                        │
-         (To NRF24 VCC pin)     (To NRF24 GND)
+      (To NRF24 VCC pin)      (To NRF24 GND)
+      (E01-ML01DP5 or              │
+       E01-2G4M27D)                │
               │                        │
               └────────────────────────┘
 ```
 
-### Triple NRF24L01 Setup with Individual AMS1117 Regulators
+### Triple NRF24L01 (E01-ML01DP5 or E01-2G4M27D) Setup with Individual AMS1117 Regulators
 
 ```
 POWER SUPPLY: Triple NRF24L01 + 3× AMS1117
@@ -231,9 +221,10 @@ POWER SUPPLY: Triple NRF24L01 + 3× AMS1117
            │             │   │          │  │            │   │
           VCC           VCC VCC        VCC
            │             │   │         │   │            │
-        NRF24#1       NRF24#2      NRF24#3           │
-        (ML01 or      (ML01 or     (ML01 or          │
-         2GM4)         2GM4)        2GM4)
+    E01-ML01DP5     E01-ML01DP5   E01-ML01DP5        │
+    or           or           or              │
+    E01-2G4M27D  E01-2G4M27D  E01-2G4M27D        │
+    (Ebyte)      (Ebyte)      (Ebyte)            │
 
 
             Shared SPI Bus (ESP32 to all radios)
@@ -262,17 +253,23 @@ Output: 3.3V / 500mA per AMS1117 regulator
 Total:  Triple AMS1117 configuration for reliability
 ```
 
-### Capacitors for Each NRF24L01 Module ⚠️ CRITICAL
+### Capacitors for Each NRF24L01 Module (E01-ML01DP5 or E01-2G4M27D) ⚠️ CRITICAL
 
 ```
 Per Radio (REQUIRED for stable operation):
   • 10µF Electrolytic capacitor (10v-64v rated)
     └─ MUST be placed directly on NRF24 VCC pin
     └─ Provides bulk energy storage and decoupling
+    └─ CRITICAL for E01-ML01DP5 and E01-2G4M27D
     
 ⚠️ CRITICAL: Use ELECTROLYTIC capacitors, NOT ceramic!
    Ceramic capacitors lack the ESR needed for low-frequency
    filtering and power supply stabilization on the NRF24L01.
+   
+   Without this capacitor:
+   - Radios will not detect or initialize
+   - ESP32 may crash or reboot
+   - Performance will be unreliable
    
 All capacitors should be placed as close as possible to 
 the NRF24 VCC and GND pins!
@@ -286,6 +283,7 @@ the NRF24 VCC and GND pins!
 ✓ Separate 3.3V rails for each radio if possible
 ✓ Ground plane recommended
 ✓ Star grounding at regulator
+✓ Use quality AMS1117 with heatsink if needed
 ```
 
 ## 🎮 User Interface
@@ -478,7 +476,7 @@ MIT License - Use it freely, but at your own legal responsibility.
 
 ### 🔧 Troubleshooting
 
-**Issue:** Radios not detected
+**Issue:** Radios not detected (E01-ML01DP5 or E01-2G4M27D)
 - Verify power supply voltage (exactly 3.3V on NRF24 VCC)
 - Check SPI pin connections (SCK, MOSI, MISO)
 - **VERIFY: 10µF electrolytic capacitor on each NRF24 VCC pin** (NOT ceramic!)
@@ -491,6 +489,7 @@ MIT License - Use it freely, but at your own legal responsibility.
 - Add 470µF capacitor on 5V input
 - Ensure short wire connections to NRF24
 - Check GND connections are solid
+- Verify capacitor is electrolytic, NOT ceramic
 
 **Issue:** OLED not displaying
 - Verify I2C address (0x3C by default)
@@ -509,7 +508,7 @@ MIT License - Use it freely, but at your own legal responsibility.
 - Ensure short wire connections to NRF24
 - Check all GND connections are solid
 
-**Issue:** Radio range is limited (2GM4 module)
+**Issue:** Radio range is limited (E01-2G4M27D module)
 - Verify antenna connection (should not be loose)
 - Check PA+LNA bias resistors
 - Ensure adequate power supply (1-2A capacity)
