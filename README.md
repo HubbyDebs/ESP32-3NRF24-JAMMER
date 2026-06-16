@@ -1,48 +1,48 @@
-# 🔥 CYPHER BOX — ESP32 Dual RF24 2.4GHz Jammer
+# 🔥 CYPHER BOX — ESP32 Triple RF24 2.4GHz Jammer
 
-Un inhibidor de señal RF basado en **ESP32** con tres módulos **NRF24L01** operando en la banda de **2.4 GHz**, con interfaz gráfica OLED y control mediante botones.
+A signal jamming device based on **ESP32** with three **NRF24L01** modules operating in the **2.4 GHz band**, featuring an OLED graphical interface and button control.
 
-## 📋 Descripción
+## 📋 Description
 
-**CYPHER BOX** es un dispositivo de prueba/demostración que implementa una máquina de estados no bloqueante para jamming de múltiples protocolos RF en 2.4 GHz:
+**CYPHER BOX** is a testing/demonstration device that implements a non-blocking state machine for jamming multiple RF protocols in 2.4 GHz:
 
-- **Bluetooth (BT JAM):** Jamming de dispositivos Bluetooth en canales 0-79
-- **Drones (DRONE JAM):** Cobertura completa de canales 0-125 (2.4GHz)
-- **WiFi (WIFI JAM):** Enfoque en canales WiFi estándar (1, 6, 14)
-- **Multi-Canal (MULTI JAM):** Barrido aleatorio de múltiples frecuencias
-- **Configuración & Ayuda:** Sistema de diagnóstico en tiempo real
+- **Bluetooth (BT JAM):** Jamming Bluetooth devices on channels 0-79
+- **Drones (DRONE JAM):** Full channel coverage 0-125 (2.4GHz)
+- **WiFi (WIFI JAM):** Focus on standard WiFi channels (1, 6, 14)
+- **Multi-Channel (MULTI JAM):** Random sweep across multiple frequencies
+- **Settings & Help:** Real-time diagnostic system
 
 ## ⚙️ Hardware
 
-### Componentes Principales
+### Main Components
 
-| Componente | Especificación |
+| Component | Specification |
 |-----------|----------------|
-| **Microcontrolador** | ESP32 (2 núcleos, 240 MHz) |
-| **Módulos RF** | 3x NRF24L01 (2.4 GHz, SPI) |
-| **Pantalla** | OLED SSD1306 (128x64, I2C) |
-| **Entrada de Usuario** | 3x Botones con antirrebote |
-| **Indicador Visual** | LED de estado |
-| **Bus de Comunicación** | VSPI compartido (SPI) |
+| **Microcontroller** | ESP32 (2 cores, 240 MHz) |
+| **RF Modules** | 3x NRF24L01 (2.4 GHz, SPI) |
+| **Display** | OLED SSD1306 (128x64, I2C) |
+| **User Input** | 3x Buttons with debouncing |
+| **Visual Indicator** | Status LED |
+| **Communication Bus** | Shared VSPI (SPI) |
 
-### Pines ESP32
+### ESP32 Pinout
 
 ```
 OLED (I2C):
   - SDA (GPIO21)
   - SCL (GPIO22)
 
-Botones:
+Buttons:
   - UP:       GPIO14
   - DOWN:     GPIO12
   - SELECT:   GPIO13
   - LED:      GPIO2
 
-NRF24L01 (VSPI - Compartido):
+NRF24L01 (VSPI - Shared):
   - SCK:      GPIO18
   - MISO:     GPIO19
   - MOSI:     GPIO23
-  - SS:       -1 (cada radio gestiona su CSN)
+  - SS:       -1 (each radio manages its own CSN)
 
 Radio 1 (NRF24 #1):
   - CE:       GPIO27
@@ -54,47 +54,47 @@ Radio 2 (NRF24 #2):
 
 Radio 3 (NRF24 #3):
   - CE:       GPIO17
-  - CSN:      GPIO32 ⚠️ (GPIO strapping pin, considerar cambiar)
+  - CSN:      GPIO32 ⚠️ (GPIO strapping pin, consider changing)
 ```
 
-## 🎮 Interfaz de Usuario
+## 🎮 User Interface
 
-### Navegación del Menú
+### Menu Navigation
 
 ```
-┌─────────────────────┐
-│      Home           │  ← Barra de título
-├─────────────────────┤
-│ ► BT_JAM            │  ← Seleccionado
-│   DRONE_JAM         │
-├─────────────────────┤
-UP/DOWN:    Navegar por opciones
-SELECT:     Activar opción seleccionada
-            (Retorno a menú desde cualquier estado)
+┌──────────────────────┐
+│       Home           │  ← Title bar
+├──────────────────────┤
+│ ► BT_JAM             │  ← Selected
+│   DRONE_JAM          │
+├──────────────────────┤
+UP/DOWN:    Navigate through options
+SELECT:     Activate selected option
+            (Return to menu from any state)
 ```
 
-### Estados Disponibles
+### Available States
 
-1. **BT_JAM** - Jamming Bluetooth
-2. **DRONE_JAM** - Jamming de Drones
-3. **WIFI_JAM** - Jamming WiFi
-4. **MULTI_JAM** - Multi-canal
-5. **SETTINGS** - Diagnostico de radios
-6. **HELP** - Ayuda en pantalla
+1. **BT_JAM** - Bluetooth Jamming
+2. **DRONE_JAM** - Drone Jamming
+3. **WIFI_JAM** - WiFi Jamming
+4. **MULTI_JAM** - Multi-channel
+5. **SETTINGS** - Radio Diagnostics
+6. **HELP** - On-screen Help
 
-## 💻 Arquitectura de Software
+## 💻 Software Architecture
 
-### Máquina de Estados No Bloqueante
+### Non-Blocking State Machine
 
-El firmware implementa una máquina de estados limpia donde:
+The firmware implements a clean state machine where:
 
 ```c
-// Loop principal - NUNCA bloquea
+// Main loop - NEVER blocks
 void loop() {
-  buttonsUpdate();           // Escaneo de botones (antirrebote)
-  digitalWrite(LED, button_held);  // Feedback LED
+  buttonsUpdate();           // Button scanning (debouncing)
+  digitalWrite(LED, button_held);  // LED feedback
   
-  // Despacho por estado
+  // Dispatch by state
   switch(currentState) {
     case STATE_MENU:       handleMenu();     break;
     case STATE_BT_JAM:     handleBT();       break;
@@ -104,13 +104,13 @@ void loop() {
 }
 ```
 
-### Antirrebote No Bloqueante
+### Non-Blocking Debouncing
 
-Cada botón implementa una máquina de estados con:
-- Detección de flancos estables
-- Ventana de debounce (25ms)
-- Flag de pulsación única por ciclo (`risingPress`)
-- Sin `delay()` ni bucles bloqueantes
+Each button implements a state machine with:
+- Stable edge detection
+- Debounce window (25ms)
+- Single press flag per cycle (`risingPress`)
+- No `delay()` or blocking loops
 
 ```c
 struct Button {
@@ -118,98 +118,98 @@ struct Button {
   bool     lastReading;
   bool     stableState;
   uint32_t lastChangeMs;
-  bool     risingPress;     // true solo durante la detección de pulsación
+  bool     risingPress;     // true only during press detection
 };
 ```
 
-### Inicialización Compartida VSPI
+### Shared VSPI Initialization
 
-Los tres módulos NRF24 comparten un único bus SPI (VSPI) con manejo independiente del chip-select (CSN):
+The three NRF24 modules share a single SPI bus (VSPI) with independent chip-select (CSN) handling:
 
 ```c
-vspi.begin(VSPI_SCK, VSPI_MISO, VSPI_MOSI, -1);  // -1 = sin CS automático
+vspi.begin(VSPI_SCK, VSPI_MISO, VSPI_MOSI, -1);  // -1 = no automatic CS
 
 r1_status = initOneRadio(radio, "R1");
 r2_status = initOneRadio(radio2, "R2");
 r3_status = initOneRadio(radio3, "R3");
 ```
 
-### Configuración de Radios NRF24
+### NRF24 Radio Configuration
 
-Cada radio se inicializa con:
-- **Auto-ACK:** Deshabilitado (transmisión cruda)
-- **Retransmisiones:** 0 (envío único)
-- **Potencia:** RF24_PA_MAX
-- **Velocidad de datos:** 2 Mbps
-- **CRC:** Deshabilitado
-- **Modo:** Portadora continua (jamming)
+Each radio is initialized with:
+- **Auto-ACK:** Disabled (raw transmission)
+- **Retransmissions:** 0 (single send)
+- **Power:** RF24_PA_MAX
+- **Data Rate:** 2 Mbps
+- **CRC:** Disabled
+- **Mode:** Continuous carrier (jamming)
 
-## 🎯 Modos de Jamming
+## 🎯 Jamming Modes
 
 ### 1. BT_JAM - Bluetooth
 ```c
-Canales: 0-79 (adaptado a especificación Bluetooth)
-Estrategia: Selección aleatoria de canal en cada ciclo
-Objetivo: Interferencia en dispositivos Bluetooth 2.4GHz
+Channels: 0-79 (adapted to Bluetooth specification)
+Strategy: Random channel selection each cycle
+Target: Interference with 2.4GHz Bluetooth devices
 ```
 
 ### 2. DRONE_JAM - Drones
 ```c
-Canales: 0-125 (cobertura completa 2.4GHz)
-Estrategia: Barrido aleatorio + micro-delays
-Objetivo: Disrupción de control de drones
+Channels: 0-125 (full 2.4GHz coverage)
+Strategy: Random sweep + micro-delays
+Target: Drone control disruption
 ```
 
 ### 3. WIFI_JAM - WiFi
 ```c
-Canales: 1, 6, 14 (canales WiFi estándar)
-Estrategia: Rotación entre canales WiFi críticos
-Objetivo: Interferencia en redes WiFi 2.4GHz
+Channels: 1, 6, 14 (standard WiFi channels)
+Strategy: Rotation through critical WiFi channels
+Target: Interference with 2.4GHz WiFi networks
 ```
 
-### 4. MULTI_JAM - Multi-canal
+### 4. MULTI_JAM - Multi-channel
 ```c
-Estrategia: Barrido aleatorio en rango 0-125
-Objetivo: Cobertura amplia del espectro 2.4GHz
+Strategy: Random sweep across 0-125 range
+Target: Broad 2.4GHz spectrum coverage
 ```
 
-## 📦 Dependencias
+## 📦 Dependencies
 
 ```cpp
 #include <Wire.h>              // I2C (OLED)
 #include <SPI.h>               // SPI (NRF24)
-#include <Adafruit_GFX.h>      // Gráficos OLED
-#include <Adafruit_SSD1306.h>  // Driver OLED
-#include <U8g2_for_Adafruit_GFX.h>  // Fuentes adicionales
-#include "RF24.h"              // Driver NRF24L01
+#include <Adafruit_GFX.h>      // OLED Graphics
+#include <Adafruit_SSD1306.h>  // OLED Driver
+#include <U8g2_for_Adafruit_GFX.h>  // Additional Fonts
+#include "RF24.h"              // NRF24L01 Driver
 ```
 
-### Instalación via Arduino IDE
+### Installation via Arduino IDE
 
 ```
 Sketch → Include Library → Manage Libraries
 
-Buscar e instalar:
+Search and install:
 - Adafruit GFX Library
 - Adafruit SSD1306
 - U8g2
 - RF24
 ```
 
-## 🚀 Compilación e Instalación
+## 🚀 Compilation & Installation
 
-1. **Placa:** Seleccionar `ESP32 Dev Module`
-2. **Puerto Serial:** Seleccionar el puerto COM/ttyUSB0
-3. **Velocidad Baud:** 115200
+1. **Board:** Select `ESP32 Dev Module`
+2. **Serial Port:** Select your COM/ttyUSB0 port
+3. **Baud Rate:** 115200
 
 ```bash
-Sketch → Verificar/Compilar
-Sketch → Subir
+Sketch → Verify/Compile
+Sketch → Upload
 ```
 
-## 📊 Pantalla de Diagnóstico
+## 📊 Diagnostic Screen
 
-Al iniciar o acceder a **SETTINGS**, se muestra:
+When starting or accessing **SETTINGS**, you'll see:
 
 ```
 ┌──────────────────────┐
@@ -221,45 +221,45 @@ Al iniciar o acceder a **SETTINGS**, se muestra:
 └──────────────────────┘
 ```
 
-## ⚠️ Advertencias Legales
+## ⚠️ Legal Disclaimers
 
-> **RESPONSABILIDAD LEGAL:** Este proyecto es ÚNICAMENTE para propósitos educativos, de investigación y demostración. El usuario es responsable de:
-> - Cumplir con todas las regulaciones RF locales
-> - Evitar interferencias con sistemas autorizados
-> - No usar en áreas donde sea ilegal
+> **LEGAL RESPONSIBILITY:** This project is STRICTLY for educational, research, and demonstration purposes only. The user is responsible for:
+> - Complying with all local RF regulations
+> - Avoiding interference with authorized systems
+> - Not using in areas where it may be illegal
 
-**NO SOMOS RESPONSABLES de:**
-- Interferencias no autorizadas
-- Daños a equipos de terceros
-- Violaciones de normativas de telecomunicaciones
+**WE ARE NOT RESPONSIBLE FOR:**
+- Unauthorized signal interference
+> - Damage to third-party equipment
+- Violations of telecommunications regulations
 
-## 📝 Créditos
+## 📝 Credits
 
-- **Desarrollador:** HubbyDebs
-- **Asistencia IA:** Gemini y Claude
-- **Prototiping/Testing:** Comunidad OpenSource RF
+- **Developer:** HubbyDebs
+- **AI Assistance:** Gemini and Claude
+- **Prototyping/Testing:** OpenSource RF Community
 
-## 📄 Licencia
+## 📄 License
 
-MIT License - Úsalo libremente, pero bajo tu responsabilidad legal.
+MIT License - Use it freely, but at your own legal responsibility.
 
 ---
 
 ### 🔧 Troubleshooting
 
-**Problema:** Radios no detectan
-- Verificar voltaje de alimentación (3.3V exactos)
-- Revisar conexiones de pines SPI
-- Comprobar condensadores de desacople en NRF24
+**Issue:** Radios not detected
+- Verify power supply voltage (exactly 3.3V)
+- Check SPI pin connections
+- Verify decoupling capacitors on NRF24 modules
 
-**Problema:** OLED no muestra nada
-- Verificar dirección I2C (0x3C por defecto)
-- Escanear I2C: `Wire.beginTransmission(0x3C)`
+**Issue:** OLED not displaying
+- Verify I2C address (0x3C by default)
+- Scan I2C: `Wire.beginTransmission(0x3C)`
 
-**Problema:** Botones no responden
-- Verificar resistencias pull-up
-- Ajustar `DEBOUNCE_MS` si es necesario
+**Issue:** Buttons not responding
+- Check pull-up resistors
+- Adjust `DEBOUNCE_MS` if necessary
 
 ---
 
-**¡Gracias por usar CYPHER BOX! 🚀**
+**Thank you for using CYPHER BOX! 🚀**
