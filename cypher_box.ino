@@ -49,7 +49,7 @@
 #define R2_CE 26
 #define R2_CS 25
 #define R3_CE 17
-#define R3_CS 32   // OJO: GPIO5 es strapping pin, considera moverlo si puedes
+#define R3_CS 32   
 
 // Antirrebote
 #define DEBOUNCE_MS 25
