@@ -397,5 +397,3 @@ MIT License - Use it freely, but at your own legal responsibility.
 - Check 3.3V voltage stability (should be 3.2-3.4V exactly)
 
 ---
-
-**Thank you for using CYPHER BOX! 🚀**
